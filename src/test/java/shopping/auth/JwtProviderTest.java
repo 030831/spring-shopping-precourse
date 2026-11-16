@@ -4,20 +4,20 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.WeakKeyException;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtProviderTest {
 
     private static final String SECRET = UUID.randomUUID().toString();
-    private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    private static final SecretKey KEY =
+            Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
     private final JwtProvider jwtProvider = new JwtProvider(SECRET, 30);
 
     private Claims parse(String token) {
