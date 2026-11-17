@@ -1,0 +1,40 @@
+package shopping.member.service;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import shopping.auth.JwtProvider;
+import shopping.common.exception.BusinessException;
+import shopping.common.exception.ErrorCode;
+import shopping.member.dto.SignupRequest;
+import shopping.member.dto.SignupResponse;
+import shopping.member.entity.Member;
+import shopping.member.repository.MemberRepository;
+
+import java.util.Locale;
+
+@Service
+@RequiredArgsConstructor
+public class MemberService {
+
+    private final MemberRepository memberRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtProvider jwtProvider;
+
+
+    @Transactional
+    public SignupResponse signup(SignupRequest request) {
+        String email = request.email().toLowerCase(Locale.ROOT);
+
+        if (memberRepository.existsByEmail(email)) {
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
+
+        String passwordHash = passwordEncoder.encode(request.password());
+        Member member = new Member(email, passwordHash, request.name());
+        memberRepository.save(member);
+
+        return new SignupResponse(jwtProvider.createToken(member.getId()));
+    }
+}
