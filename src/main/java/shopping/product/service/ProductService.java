@@ -44,4 +44,16 @@ public class ProductService {
         return ProductResponse.from(productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_PRODUCT)));
     }
+
+    @Transactional
+    public void update(Long productId, ProductRequest request) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_PRODUCT));
+
+        if (purgoMalumClient.containsProfanity(request.name())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_PRODUCT_NAME);
+        }
+
+        product.update(request.name(), request.price(), request.url());
+    }
 }

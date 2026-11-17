@@ -5,7 +5,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,9 +13,11 @@ import shopping.product.repository.ProductRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -34,7 +35,7 @@ public class ProductApiTest {
 
     MvcTestResult postJson(String uri, String body) {
         return mvc.post().uri(uri)
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .content(body)
                 .exchange();
     }
@@ -48,6 +49,15 @@ public class ProductApiTest {
         return postJson(PRODUCTS_URL, """
                 {"name": "%s", "price": %d, "url": "%s"}
                 """.formatted(name, price, url));
+    }
+
+    MvcTestResult updateProduct(Long productId, String name, long price, String url) {
+        return mvc.put().uri(PRODUCTS_URL + "/{productId}", productId)
+                .contentType(APPLICATION_JSON)
+                .content("""
+                        {"name": "%s", "price": %d, "url": "%s"}
+                        """.formatted(name, price, url))
+                .exchange();
     }
 
     @Test
@@ -215,5 +225,61 @@ public class ProductApiTest {
 
         // then
         assertError(result, NOT_FOUND, "NOT_EXIST_PRODUCT");
+    }
+
+    @Test
+    void 상품을_수정하면_204이고_바뀐_값이_저장된다() {
+        // given
+        Product product = productRepository.save(new Product("아메리카노", 4000, OK_URL));
+
+        // when
+        MvcTestResult result = updateProduct(
+                product.getId(), "라떼", 4500, "https://example.com/latte.png");
+
+        // then
+        assertThat(result).hasStatus(NO_CONTENT);
+        Product foundProduct = productRepository.findById(product.getId()).orElseThrow();
+
+        assertThat(foundProduct.getName()).isEqualTo("라떼");
+        assertThat(foundProduct.getPrice()).isEqualTo(4500);
+        assertThat(foundProduct.getUrl()).isEqualTo("https://example.com/latte.png");
+    }
+
+    @Test
+    void 없는_상품을_수정하면_NOT_EXIST_PRODUCT이다() {
+        // when
+        MvcTestResult result = updateProduct(999_999L, "라떼", 4500, OK_URL);
+
+        // then
+        assertError(result, NOT_FOUND, "NOT_EXIST_PRODUCT");
+    }
+
+    @Test
+    void 수정할_이름에_비속어가_있으면_FORBIDDEN_PRODUCT_NAME이고_바뀌지_않는다() {
+        // given
+        Product product = productRepository.save(new Product("아메리카노", 4000, OK_URL));
+
+        // when
+        MvcTestResult result = updateProduct(product.getId(), "shit coffee", 4500, OK_URL);
+
+        // then
+        assertError(result, BAD_REQUEST, "FORBIDDEN_PRODUCT_NAME");
+        assertThat(productRepository.findById(product.getId()).orElseThrow().getName())
+                .isEqualTo("아메리카노");
+    }
+
+    @Test
+    void 수정_값의_형식이_틀리면_INVALID_INPUT이다() {
+        // given
+        Product product = productRepository.save(new Product("아메리카노", 4000, OK_URL));
+
+        // when
+        MvcTestResult result = updateProduct(product.getId(), "가".repeat(16), -1, "abc");
+
+        // then
+        assertError(result, BAD_REQUEST, "INVALID_INPUT");
+        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
+                .containsExactlyInAnyOrder("PRODUCT_NAME_TOO_LONG",
+                        "EXCEED_PRICE", "INVALID_URL_FORMAT");
     }
 }

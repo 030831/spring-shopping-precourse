@@ -33,4 +33,10 @@ public class Product {
         this.price = price;
         this.url = url;
     }
+
+    public void update(String name, long price, String url) {
+        this.name = name;
+        this.price = price;
+        this.url = url;
+    }
 }
