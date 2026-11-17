@@ -11,6 +11,8 @@ import shopping.product.dto.ProductResponse;
 import shopping.product.entity.Product;
 import shopping.product.repository.ProductRepository;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ProductService {
@@ -28,5 +30,12 @@ public class ProductService {
         productRepository.save(product);
 
         return ProductResponse.from(product);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> findAll() {
+        return productRepository.findAll().stream()
+                .map(ProductResponse::from)
+                .toList();
     }
 }

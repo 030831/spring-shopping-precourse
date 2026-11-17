@@ -13,8 +13,9 @@ import shopping.product.entity.Product;
 import shopping.product.repository.ProductRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.HttpStatus.CREATED;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -161,5 +162,30 @@ public class ProductApiTest {
         assertError(result, BAD_REQUEST, "INVALID_INPUT");
         assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
                 .containsExactly("NOT_ALLOWED_CHARACTERS");
+    }
+
+    @Test
+    void 상품_목록을_조회하면_200과_모든_상품을_준다() {
+        // given
+        productRepository.save(new Product("아메리카노", 4000, OK_URL));
+        productRepository.save(new Product("라떼", 4500, OK_URL));
+
+        // when
+        MvcTestResult result = mvc.get().uri(PRODUCTS_URL).exchange();
+
+        // then
+        assertThat(result).hasStatus(OK);
+        assertThat(result).bodyJson().extractingPath("$[*].name").asArray()
+                .containsExactlyInAnyOrder("아메리카노", "라떼");
+    }
+
+    @Test
+    void 상품이_없으면_빈_목록을_준다() {
+        // when
+        MvcTestResult result = mvc.get().uri(PRODUCTS_URL).exchange();
+
+        // then
+        assertThat(result).hasStatus(OK);
+        assertThat(result).bodyJson().extractingPath("$").asArray().isEmpty();
     }
 }
