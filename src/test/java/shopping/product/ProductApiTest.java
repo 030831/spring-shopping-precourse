@@ -13,6 +13,7 @@ import shopping.product.entity.Product;
 import shopping.product.repository.ProductRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -187,5 +188,32 @@ public class ProductApiTest {
         // then
         assertThat(result).hasStatus(OK);
         assertThat(result).bodyJson().extractingPath("$").asArray().isEmpty();
+    }
+
+    @Test
+    void 상품을_조회하면_200과_상품을_준다() {
+        // given
+        Product product = productRepository.save(new Product("아메리카노", 4000, OK_URL));
+
+        // when
+        MvcTestResult result = mvc.get().uri(PRODUCTS_URL + "/{productId}", product.getId())
+                .exchange();
+
+        // then
+        assertThat(result).hasStatus(OK);
+        assertThat(result).bodyJson().extractingPath("$.name")
+                .isEqualTo("아메리카노");
+        assertThat(result).bodyJson().extractingPath("$.price")
+                .isEqualTo(4000);
+    }
+
+    @Test
+    void 없는_상품을_조회하면_NOT_EXIST_PRODUCT이다() {
+        // when
+        MvcTestResult result = mvc.get().uri(PRODUCTS_URL + "/{productId}", 999999)
+                .exchange();
+
+        // then
+        assertError(result, NOT_FOUND, "NOT_EXIST_PRODUCT");
     }
 }

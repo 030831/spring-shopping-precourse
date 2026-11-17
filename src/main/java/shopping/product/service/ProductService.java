@@ -38,4 +38,10 @@ public class ProductService {
                 .map(ProductResponse::from)
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public ProductResponse findById(Long productId) {
+        return ProductResponse.from(productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_PRODUCT)));
+    }
 }
