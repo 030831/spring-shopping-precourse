@@ -23,6 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.CREATED;
+import static org.springframework.http.HttpStatus.OK;
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -34,6 +36,7 @@ class MemberApiTest {
             """;
 
     static final String REGISTER_URL = "/api/members/register";
+    static final String LOGIN_URL = "/api/members/login";
 
     @Autowired
     MockMvcTester mvc;
@@ -144,5 +147,59 @@ class MemberApiTest {
         // then
         assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
                 .containsExactly("INVALID_PASSWORD_CHARACTER");
+    }
+
+    @Test
+    void 로그인하면_200과_회원_id를_sub에_담은_토큰을_준다() {
+        // given
+        postJson(REGISTER_URL, SIGNUP_BODY);
+
+        // when
+        MvcTestResult result = postJson(LOGIN_URL, """
+                    {"email": "KIM@example.com", "password": "password1234567"}
+                """);
+
+        // then
+        assertThat(result).hasStatus(OK);
+        Member member = memberRepository.findByEmail("kim@example.com").orElseThrow();
+        assertThat(subjectOf(result)).isEqualTo(String.valueOf(member.getId()));
+    }
+
+    @Test
+    void 비밀번호가_틀리면_FAIL_LOGIN이다() {
+        // given
+        postJson(REGISTER_URL, SIGNUP_BODY);
+
+        // when
+        MvcTestResult result = postJson(LOGIN_URL, """
+                    {"email": "kim@example.com", "password": "wrongpassword123456"}
+                """);
+
+        // then
+        assertError(result, UNAUTHORIZED, "FAIL_LOGIN");
+    }
+
+    @Test
+    void 가입하지_않은_이메일도_같은_FAIL_LOGIN이다() {
+        // when
+        MvcTestResult result = postJson(LOGIN_URL, """
+                    {"email": "nobody@example.com", "password": "password1234567"}
+                """);
+
+        // then
+        assertError(result, UNAUTHORIZED, "FAIL_LOGIN");
+        assertThat(result).bodyJson().extractingPath("$.detail")
+                .isEqualTo("이메일 또는 비밀번호가 올바르지 않습니다.");
+    }
+
+    @Test
+    void 로그인_값이_없으면_필드마다_누락_코드를_준다() {
+        // when
+        MvcTestResult result = postJson(LOGIN_URL, "{}");
+
+        // then
+        assertError(result, BAD_REQUEST, "INVALID_INPUT");
+        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
+                .containsExactlyInAnyOrder("EMAIL_MISSING", "PASSWORD_MISSING");
     }
 }

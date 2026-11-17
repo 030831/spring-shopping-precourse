@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RequestBody;
+import shopping.member.dto.LoginRequest;
+import shopping.member.dto.LoginResponse;
 import shopping.member.dto.SignupRequest;
 import shopping.member.dto.SignupResponse;
 import shopping.member.service.MemberService;
@@ -23,6 +25,11 @@ public class MemberController {
     @ResponseStatus(HttpStatus.CREATED)
     public SignupResponse signup(@Valid @RequestBody SignupRequest request) {
         return memberService.signup(request);
+    }
+
+    @PostMapping("/login")
+    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
+        return memberService.login(request);
     }
 
 }

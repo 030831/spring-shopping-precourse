@@ -7,6 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 import shopping.auth.JwtProvider;
 import shopping.common.exception.BusinessException;
 import shopping.common.exception.ErrorCode;
+import shopping.member.dto.LoginRequest;
+import shopping.member.dto.LoginResponse;
 import shopping.member.dto.SignupRequest;
 import shopping.member.dto.SignupResponse;
 import shopping.member.entity.Member;
@@ -36,5 +38,19 @@ public class MemberService {
         memberRepository.save(member);
 
         return new SignupResponse(jwtProvider.createToken(member.getId()));
+    }
+
+    @Transactional(readOnly = true)
+    public LoginResponse login(LoginRequest request) {
+        String email = request.email().toLowerCase(Locale.ROOT);
+
+        Member member = memberRepository.findByEmail(email)
+                .filter(found ->
+                        passwordEncoder.matches(request.password(), found.getPasswordHash()))
+                .orElseThrow(() -> new BusinessException(ErrorCode.FAIL_LOGIN));
+
+
+        return new LoginResponse(jwtProvider.createToken(member.getId()));
+
     }
 }
