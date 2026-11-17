@@ -36,7 +36,10 @@ public enum ErrorCode {
     NOT_EXIST_PATH(NOT_FOUND, "존재하지 않는 경로입니다."),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 요청 방식입니다."),
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 형식입니다."),
-    INTERNAL_ERROR(INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
+    INTERNAL_ERROR(INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
+    PRODUCT_NAME_MISSING(BAD_REQUEST, "상품 이름은 필수로 입력해야 합니다."),
+    URL_MISSING(BAD_REQUEST, "이미지 URL은 필수로 입력해야 합니다."),
+    INVALID_URL_FORMAT(BAD_REQUEST, "이미지 URL은 http:// 또는 https://로 시작해야 합니다.");
 
     private final HttpStatus status;
     private final String message;
