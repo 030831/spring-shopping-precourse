@@ -56,4 +56,12 @@ public class ProductService {
 
         product.update(request.name(), request.price(), request.url());
     }
+
+    @Transactional
+    public void delete(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_PRODUCT));
+
+        productRepository.delete(product);
+    }
 }

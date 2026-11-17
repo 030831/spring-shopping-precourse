@@ -282,4 +282,28 @@ public class ProductApiTest {
                 .containsExactlyInAnyOrder("PRODUCT_NAME_TOO_LONG",
                         "EXCEED_PRICE", "INVALID_URL_FORMAT");
     }
+
+    @Test
+    void 상품을_삭제하면_204이고_DB에서_사라진다() {
+        // given
+        Product product = productRepository.save(new Product("아메리카노", 4000, OK_URL));
+
+        // when
+        MvcTestResult result = mvc.delete().uri(PRODUCTS_URL + "/{productId}", product.getId())
+                .exchange();
+
+        // then
+        assertThat(result).hasStatus(NO_CONTENT);
+        assertThat(productRepository.findById(product.getId())).isEmpty();
+    }
+
+    @Test
+    void 없는_상품을_삭제하면_NOT_EXIST_PRODUCT이다() {
+        // when
+        MvcTestResult result = mvc.delete().uri(PRODUCTS_URL + "/{productId}", 999_999L)
+                .exchange();
+
+        // then
+        assertError(result, NOT_FOUND, "NOT_EXIST_PRODUCT");
+    }
 }
