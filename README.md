@@ -205,6 +205,8 @@
 - Member member 와는 @ManyToOne 관계이고, @JoinColumn은 "member_id" 이다.
 - 연관관계의 주인은 위시리스트 이다.
 - FK로 member_id 와 product_id를 두고, UNIQUE제약에 (member_id, product_id)를 걸어 회원이 상품에 대한 중복된 위시 리스트를 담을 수 없도록 한다.
+- 상품을 삭제하면 그 상품이 담긴 위시도 함께 삭제한다. product_id 외래키에 ON DELETE CASCADE를 건다.
+- 토큰의 회원이 DB에 없으면 401 INVALID_TOKEN을 반환한다.
 
 #### 위시 리스트 API
 
@@ -266,6 +268,7 @@ API 명세는 아래와 같다. 클라이언트에 따라 이러한 API가 모�
 |---|---|---|---|---|
 | 이미지 URL 형식 오류 | 400 | 이미지 URL은 http:// 또는 https://로 시작해야 합니다. | `INVALID_URL_FORMAT` | errors |
 | 이미지 URL 누락 | 400 | 이미지 URL은 필수로 입력해야 합니다. | `URL_MISSING` | errors |
+| 상품 id 누락 | 400 | 상품은 필수로 입력해야 합니다. | `PRODUCT_ID_MISSING` | errors |
 | 상품 이름 누락 | 400 | 상품 이름은 필수로 입력해야 합니다. | `PRODUCT_NAME_MISSING` | errors |
 | 상품 이름이 15자 초과 | 400 | 상품 이름은 15자 이하여야 합니다. | `PRODUCT_NAME_TOO_LONG` | errors |
 | (상품의) 허용하지 않은 특수 문자 | 400 | 특수 문자가 들어갈 수 없습니다. | `NOT_ALLOWED_CHARACTERS` | errors |
@@ -309,7 +312,7 @@ API 명세는 아래와 같다. 클라이언트에 따라 이러한 API가 모�
 - [x] : 상품 수정   
 - [x] : 상품 삭제   
 - [x] : 위시 API 토큰 인증 
-- [ ] : 위시 추가   
+- [x] : 위시 추가   
 - [ ] : 위시 삭제   
 - [ ] : 위시 조회  
 

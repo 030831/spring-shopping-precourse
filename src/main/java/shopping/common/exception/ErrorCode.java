@@ -39,7 +39,8 @@ public enum ErrorCode {
     INTERNAL_ERROR(INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
     PRODUCT_NAME_MISSING(BAD_REQUEST, "상품 이름은 필수로 입력해야 합니다."),
     URL_MISSING(BAD_REQUEST, "이미지 URL은 필수로 입력해야 합니다."),
-    INVALID_URL_FORMAT(BAD_REQUEST, "이미지 URL은 http:// 또는 https://로 시작해야 합니다.");
+    INVALID_URL_FORMAT(BAD_REQUEST, "이미지 URL은 http:// 또는 https://로 시작해야 합니다."),
+    PRODUCT_ID_MISSING(BAD_REQUEST, "상품은 필수로 입력해야 합니다.");
 
     private final HttpStatus status;
     private final String message;
