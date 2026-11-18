@@ -3,6 +3,8 @@ package shopping.wish.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,5 +27,11 @@ public class WishController {
     public WishResponse add(@LoginMemberId Long memberId,
                             @Valid @RequestBody WishRequest request) {
         return wishService.add(memberId, request);
+    }
+
+    @DeleteMapping("/{wishId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@LoginMemberId Long memberId, @PathVariable Long wishId) {
+        wishService.delete(memberId, wishId);
     }
 }

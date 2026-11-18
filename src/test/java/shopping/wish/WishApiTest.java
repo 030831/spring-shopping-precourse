@@ -146,6 +146,57 @@ class WishApiTest {
         assertThat(wishRepository.findById(wish.getId())).isEmpty();
     }
 
+    @Test
+    void 위시를_삭제하면_204이고_DB에서_사라진다() {
+        // given
+        Wish wish = wishRepository.save(new Wish(member, product));
+
+        // when
+        MvcTestResult result = deleteWish(token, wish.getId());
+
+        // then
+        assertThat(result).hasStatus(NO_CONTENT);
+        assertThat(wishRepository.findById(wish.getId())).isEmpty();
+    }
+
+    @Test
+    void 없는_위시를_삭제하면_NOT_EXIST_WISH이다() {
+        // when
+        MvcTestResult result = deleteWish(token, 999_999L);
+
+        // then
+        assertError(result, NOT_FOUND, "NOT_EXIST_WISH");
+    }
+
+    @Test
+    void 다른_회원의_위시를_삭제하면_NOT_EXIST_WISH이고_지워지지_않는다() {
+        // given
+        Member otherMember = memberRepository.save(new Member("other@example.com", "hash",
+                "남"));
+
+        Wish otherWish = wishRepository.save(new Wish(otherMember, product));
+
+        // when
+        MvcTestResult result = deleteWish(token, otherWish.getId());
+
+        // then
+        assertError(result, NOT_FOUND, "NOT_EXIST_WISH");
+        assertThat(wishRepository.findById(otherWish.getId())).isPresent();
+    }
+
+    @Test
+    void 없는_회원의_토큰으로_위시를_삭제하면_INVALID_TOKEN이다() {
+        // given
+        Wish wish = wishRepository.save(new Wish(member, product));
+        String unknownMemberToken = jwtProvider.createToken(999_999L);
+
+        // when
+        MvcTestResult result = deleteWish(unknownMemberToken, wish.getId());
+
+        // then
+        assertError(result, UNAUTHORIZED, "INVALID_TOKEN");
+    }
+
     void assertError(MvcTestResult result, HttpStatus status, String code) {
         assertThat(result).hasStatus(status);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo(code);
@@ -163,5 +214,11 @@ class WishApiTest {
         return """
                {"productId": %d}
                """.formatted(productId);
+    }
+
+    MvcTestResult deleteWish(String token, Long wishId) {
+        return mvc.delete().uri(WISHES_URL + "/{wishId}", wishId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange();
     }
 }

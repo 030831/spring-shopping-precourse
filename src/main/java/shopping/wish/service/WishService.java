@@ -38,4 +38,15 @@ public class WishService {
 
         return WishResponse.from(wish);
     }
+
+    @Transactional
+    public void delete(Long memberId, Long wishId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+
+        Wish wish = wishRepository.findByIdAndMember(wishId, member)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_WISH));
+
+        wishRepository.delete(wish);
+    }
 }
