@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import shopping.auth.JwtProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @WebMvcTest(GlobalExceptionHandlerTest.TestController.class)
-@Import(GlobalExceptionHandlerTest.TestController.class)
+@Import({GlobalExceptionHandlerTest.TestController.class,
+        JwtProvider.class})
 class GlobalExceptionHandlerTest {
 
     @Autowired
