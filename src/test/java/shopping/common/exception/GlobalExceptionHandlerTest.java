@@ -19,6 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 import shopping.auth.JwtProvider;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static shopping.support.ApiTestSupport.assertError;
+import static shopping.support.ApiTestSupport.assertInvalidInput;
+import static shopping.support.ApiTestSupport.postJson;
 
 @WebMvcTest(GlobalExceptionHandlerTest.TestController.class)
 @Import({GlobalExceptionHandlerTest.TestController.class,
@@ -35,18 +38,16 @@ class GlobalExceptionHandlerTest {
             {"name": "열여섯글자가넘는아주긴상품이름입니다","price": null}""";
 
         // when
-        MvcTestResult result = postJson("/test/validation", body);
+        MvcTestResult result = postJson(mvc, "/test/validation", body);
 
         // then
-        assertError(result, HttpStatus.BAD_REQUEST, "INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
-                .containsExactlyInAnyOrder("PRODUCT_NAME_TOO_LONG", "PRICE_MISSING");
+        assertInvalidInput(result, "PRODUCT_NAME_TOO_LONG", "PRICE_MISSING");
     }
 
     @Test
     void 메시지가_ErrorCode_이름이_아니면_errors의_code는_INVALID_INPUT이다() {
         // when
-        MvcTestResult result = postJson("/test/fallback", "{}");
+        MvcTestResult result = postJson(mvc, "/test/fallback", "{}");
 
         // then
         assertError(result, HttpStatus.BAD_REQUEST, "INVALID_INPUT");
@@ -69,7 +70,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void 깨진_JSON은_INVALID_JSON이다() {
         // when
-        MvcTestResult result = postJson("/test/validation", "{");
+        MvcTestResult result = postJson(mvc, "/test/validation", "{");
 
         // then
         assertError(result, HttpStatus.BAD_REQUEST, "INVALID_JSON");
@@ -78,7 +79,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void JSON_본문의_숫자_자리에_문자를_넣으면_INVALID_JSON이다() {
         // when
-        MvcTestResult result = postJson("/test/validation", """
+        MvcTestResult result = postJson(mvc, "/test/validation", """
                 {"name": "a", "price": "abc"}
                 """);
 
@@ -132,18 +133,6 @@ class GlobalExceptionHandlerTest {
         assertError(result, HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR");
         assertThat(result).bodyJson().extractingPath("$.detail")
                 .isEqualTo("서버 오류가 발생했습니다.");
-    }
-
-    private MvcTestResult postJson(String uri, String body) {
-        return mvc.post().uri(uri)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(body)
-                .exchange();
-    }
-
-    private void assertError(MvcTestResult result, HttpStatus status, String code) {
-        assertThat(result).hasStatus(status);
-        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo(code);
     }
 
     record TestRequest(

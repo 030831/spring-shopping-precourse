@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,12 +11,15 @@ import shopping.product.entity.Product;
 import shopping.product.repository.ProductRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
-import static org.springframework.http.HttpStatus.CREATED;
-import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static shopping.support.ApiTestSupport.assertError;
+import static shopping.support.ApiTestSupport.assertInvalidInput;
+import static shopping.support.ApiTestSupport.postJson;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -33,31 +35,33 @@ public class ProductApiTest {
     @Autowired
     ProductRepository productRepository;
 
-    MvcTestResult postJson(String uri, String body) {
-        return mvc.post().uri(uri)
-                .contentType(APPLICATION_JSON)
-                .content(body)
-                .exchange();
-    }
-
-    void assertError(MvcTestResult result, HttpStatus status, String code) {
-        assertThat(result).hasStatus(status);
-        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo(code);
-    }
-
     MvcTestResult createProduct(String name, long price, String url) {
-        return postJson(PRODUCTS_URL, """
-                {"name": "%s", "price": %d, "url": "%s"}
-                """.formatted(name, price, url));
+        return postJson(mvc, PRODUCTS_URL, productBody(name, price, url));
     }
 
     MvcTestResult updateProduct(Long productId, String name, long price, String url) {
         return mvc.put().uri(PRODUCTS_URL + "/{productId}", productId)
                 .contentType(APPLICATION_JSON)
-                .content("""
-                        {"name": "%s", "price": %d, "url": "%s"}
-                        """.formatted(name, price, url))
+                .content(productBody(name, price, url))
                 .exchange();
+    }
+
+    MvcTestResult getProduct(Long productId) {
+        return mvc.get().uri(PRODUCTS_URL + "/{productId}", productId).exchange();
+    }
+
+    MvcTestResult deleteProduct(Long productId) {
+        return mvc.delete().uri(PRODUCTS_URL + "/{productId}", productId).exchange();
+    }
+
+    String productBody(String name, long price, String url) {
+        return """
+                {"name": "%s", "price": %d, "url": "%s"}
+                """.formatted(name, price, url);
+    }
+
+    Product saveAmericano() {
+        return productRepository.save(new Product("아메리카노", 4000, OK_URL));
     }
 
     @Test
@@ -90,13 +94,11 @@ public class ProductApiTest {
     @Test
     void 값이_없으면_필드마다_누락_코드를_준다() {
         // when
-        MvcTestResult result = postJson(PRODUCTS_URL, "{}");
+        MvcTestResult result = postJson(mvc, PRODUCTS_URL, "{}");
 
         // then
-        assertError(result, BAD_REQUEST, "INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
-                .containsExactlyInAnyOrder("PRODUCT_NAME_MISSING", "PRICE_MISSING",
-                        "URL_MISSING");
+        assertInvalidInput(result, "PRODUCT_NAME_MISSING",
+                "PRICE_MISSING", "URL_MISSING");
     }
 
     @Test
@@ -105,9 +107,7 @@ public class ProductApiTest {
         MvcTestResult result = createProduct("가".repeat(16), 1000, OK_URL);
 
         // then
-        assertError(result, BAD_REQUEST, "INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
-                .containsExactly("PRODUCT_NAME_TOO_LONG");
+        assertInvalidInput(result, "PRODUCT_NAME_TOO_LONG");
     }
 
     @Test
@@ -116,9 +116,7 @@ public class ProductApiTest {
         MvcTestResult result = createProduct("커피!", 1000, OK_URL);
 
         // then
-        assertError(result, BAD_REQUEST, "INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
-                .containsExactly("NOT_ALLOWED_CHARACTERS");
+        assertInvalidInput(result, "NOT_ALLOWED_CHARACTERS");
     }
 
     @Test
@@ -127,9 +125,7 @@ public class ProductApiTest {
         MvcTestResult result = createProduct("커피", -1, OK_URL);
 
         // then
-        assertError(result, BAD_REQUEST, "INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
-                .containsExactly("EXCEED_PRICE");
+        assertInvalidInput(result, "EXCEED_PRICE");
     }
 
     @Test
@@ -138,9 +134,7 @@ public class ProductApiTest {
         MvcTestResult result = createProduct("커피", 2_147_483_648L, OK_URL);
 
         // then
-        assertError(result, BAD_REQUEST, "INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
-                .containsExactly("EXCEED_PRICE");
+        assertInvalidInput(result, "EXCEED_PRICE");
     }
 
     @Test
@@ -149,9 +143,7 @@ public class ProductApiTest {
         MvcTestResult result = createProduct("커피", 1000, "example.com/a.png");
 
         // then
-        assertError(result, BAD_REQUEST, "INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
-                .containsExactly("INVALID_URL_FORMAT");
+        assertInvalidInput(result, "INVALID_URL_FORMAT");
     }
 
     @Test
@@ -170,15 +162,13 @@ public class ProductApiTest {
         MvcTestResult result = createProduct("shit!", 1000, OK_URL);
 
         // then
-        assertError(result, BAD_REQUEST, "INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
-                .containsExactly("NOT_ALLOWED_CHARACTERS");
+        assertInvalidInput(result, "NOT_ALLOWED_CHARACTERS");
     }
 
     @Test
     void 상품_목록을_조회하면_200과_모든_상품을_준다() {
         // given
-        productRepository.save(new Product("아메리카노", 4000, OK_URL));
+        saveAmericano();
         productRepository.save(new Product("라떼", 4500, OK_URL));
 
         // when
@@ -203,11 +193,10 @@ public class ProductApiTest {
     @Test
     void 상품을_조회하면_200과_상품을_준다() {
         // given
-        Product product = productRepository.save(new Product("아메리카노", 4000, OK_URL));
+        Product product = saveAmericano();
 
         // when
-        MvcTestResult result = mvc.get().uri(PRODUCTS_URL + "/{productId}", product.getId())
-                .exchange();
+        MvcTestResult result = getProduct(product.getId());
 
         // then
         assertThat(result).hasStatus(OK);
@@ -220,8 +209,7 @@ public class ProductApiTest {
     @Test
     void 없는_상품을_조회하면_NOT_EXIST_PRODUCT이다() {
         // when
-        MvcTestResult result = mvc.get().uri(PRODUCTS_URL + "/{productId}", 999999)
-                .exchange();
+        MvcTestResult result = getProduct(999_999L);
 
         // then
         assertError(result, NOT_FOUND, "NOT_EXIST_PRODUCT");
@@ -230,7 +218,7 @@ public class ProductApiTest {
     @Test
     void 상품을_수정하면_204이고_바뀐_값이_저장된다() {
         // given
-        Product product = productRepository.save(new Product("아메리카노", 4000, OK_URL));
+        Product product = saveAmericano();
 
         // when
         MvcTestResult result = updateProduct(
@@ -257,7 +245,7 @@ public class ProductApiTest {
     @Test
     void 수정할_이름에_비속어가_있으면_FORBIDDEN_PRODUCT_NAME이고_바뀌지_않는다() {
         // given
-        Product product = productRepository.save(new Product("아메리카노", 4000, OK_URL));
+        Product product = saveAmericano();
 
         // when
         MvcTestResult result = updateProduct(product.getId(), "shit coffee", 4500, OK_URL);
@@ -271,26 +259,23 @@ public class ProductApiTest {
     @Test
     void 수정_값의_형식이_틀리면_INVALID_INPUT이다() {
         // given
-        Product product = productRepository.save(new Product("아메리카노", 4000, OK_URL));
+        Product product = saveAmericano();
 
         // when
         MvcTestResult result = updateProduct(product.getId(), "가".repeat(16), -1, "abc");
 
         // then
-        assertError(result, BAD_REQUEST, "INVALID_INPUT");
-        assertThat(result).bodyJson().extractingPath("$.errors[*].code").asArray()
-                .containsExactlyInAnyOrder("PRODUCT_NAME_TOO_LONG",
-                        "EXCEED_PRICE", "INVALID_URL_FORMAT");
+        assertInvalidInput(result, "PRODUCT_NAME_TOO_LONG",
+                "EXCEED_PRICE", "INVALID_URL_FORMAT");
     }
 
     @Test
     void 상품을_삭제하면_204이고_DB에서_사라진다() {
         // given
-        Product product = productRepository.save(new Product("아메리카노", 4000, OK_URL));
+        Product product = saveAmericano();
 
         // when
-        MvcTestResult result = mvc.delete().uri(PRODUCTS_URL + "/{productId}", product.getId())
-                .exchange();
+        MvcTestResult result = deleteProduct(product.getId());
 
         // then
         assertThat(result).hasStatus(NO_CONTENT);
@@ -300,8 +285,7 @@ public class ProductApiTest {
     @Test
     void 없는_상품을_삭제하면_NOT_EXIST_PRODUCT이다() {
         // when
-        MvcTestResult result = mvc.delete().uri(PRODUCTS_URL + "/{productId}", 999_999L)
-                .exchange();
+        MvcTestResult result = deleteProduct(999_999L);
 
         // then
         assertError(result, NOT_FOUND, "NOT_EXIST_PRODUCT");

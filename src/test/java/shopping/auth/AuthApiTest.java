@@ -7,7 +7,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
+import static shopping.support.ApiTestSupport.assertError;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -32,11 +32,6 @@ class AuthApiTest {
 
     @Value("${jwt.secret}")
     String secret;
-
-    void assertError(MvcTestResult result, HttpStatus status, String code) {
-        assertThat(result).hasStatus(status);
-        assertThat(result).bodyJson().extractingPath("$.code").isEqualTo(code);
-    }
 
     MvcTestResult getWithAuthorization(String authorization) {
         return mvc.get().uri(AUTH_TEST_URL)
