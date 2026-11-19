@@ -24,10 +24,9 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
 
-
     @Transactional
     public SignupResponse signup(SignupRequest request) {
-        String email = request.email().toLowerCase(Locale.ROOT);
+        String email = normalizeEmail(request.email());
 
         if (memberRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
@@ -42,15 +41,17 @@ public class MemberService {
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        String email = request.email().toLowerCase(Locale.ROOT);
+        String email = normalizeEmail(request.email());
 
         Member member = memberRepository.findByEmail(email)
                 .filter(found ->
                         passwordEncoder.matches(request.password(), found.getPasswordHash()))
                 .orElseThrow(() -> new BusinessException(ErrorCode.FAIL_LOGIN));
 
-
         return new LoginResponse(jwtProvider.createToken(member.getId()));
+    }
 
+    private String normalizeEmail(String email) {
+        return email.toLowerCase(Locale.ROOT);
     }
 }

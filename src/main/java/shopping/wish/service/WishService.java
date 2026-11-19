@@ -26,8 +26,7 @@ public class WishService {
 
     @Transactional
     public WishResponse add(Long memberId, WishRequest request) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+        Member member = findMember(memberId);
 
         Product product = productRepository.findById(request.productId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_PRODUCT));
@@ -43,8 +42,7 @@ public class WishService {
 
     @Transactional
     public void delete(Long memberId, Long wishId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+        Member member = findMember(memberId);
 
         Wish wish = wishRepository.findByIdAndMember(wishId, member)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_WISH));
@@ -54,11 +52,15 @@ public class WishService {
 
     @Transactional(readOnly = true)
     public List<WishResponse> findAll(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+        Member member = findMember(memberId);
 
         return wishRepository.findAllByMember(member).stream()
                 .map(WishResponse::from)
                 .toList();
+    }
+
+    private Member findMember(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
     }
 }

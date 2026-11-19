@@ -26,6 +26,7 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
+    private static final String CODE = "code";
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final Map<Class<? extends Exception>, ErrorCode> SPRING_ERROR_CODES = Map.of(
             MethodArgumentNotValidException.class, ErrorCode.INVALID_INPUT,
@@ -70,8 +71,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ErrorCode errorCode = toErrorCode(exception);
         if (errorCode != null && response != null
                 && response.getBody() instanceof ProblemDetail problem) {
-            problem.setDetail(errorCode.getMessage());
-            problem.setProperty("code", errorCode.name());
+            applyErrorCode(problem, errorCode);
         }
         return response;
     }
@@ -85,10 +85,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     private ProblemDetail toProblemDetail(ErrorCode errorCode) {
-        ProblemDetail problemDetail =
-                ProblemDetail.forStatusAndDetail(errorCode.getStatus(), errorCode.getMessage());
-        problemDetail.setProperty("code", errorCode.name());
+        ProblemDetail problemDetail = ProblemDetail.forStatus(errorCode.getStatus());
+        applyErrorCode(problemDetail, errorCode);
         return problemDetail;
+    }
+
+    private void applyErrorCode(ProblemDetail problem, ErrorCode errorCode) {
+        problem.setDetail(errorCode.getMessage());
+        problem.setProperty(CODE, errorCode.name());
     }
 
     private FieldErrorResponse toFieldErrorResponse(FieldError fieldError) {

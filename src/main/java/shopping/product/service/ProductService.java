@@ -22,9 +22,7 @@ public class ProductService {
 
     @Transactional
     public ProductResponse create(ProductRequest request) {
-        if (purgoMalumClient.containsProfanity(request.name())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_PRODUCT_NAME);
-        }
+        validateName(request.name());
 
         Product product = new Product(request.name(), request.price(), request.url());
         productRepository.save(product);
@@ -41,27 +39,32 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public ProductResponse findById(Long productId) {
-        return ProductResponse.from(productRepository.findById(productId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_PRODUCT)));
+        return ProductResponse.from(findProduct(productId));
     }
 
     @Transactional
     public void update(Long productId, ProductRequest request) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_PRODUCT));
-
-        if (purgoMalumClient.containsProfanity(request.name())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_PRODUCT_NAME);
-        }
+        Product product = findProduct(productId);
+        validateName(request.name());
 
         product.update(request.name(), request.price(), request.url());
     }
 
     @Transactional
     public void delete(Long productId) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_PRODUCT));
+        Product product = findProduct(productId);
 
         productRepository.delete(product);
+    }
+
+    private Product findProduct(Long productId) {
+        return productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_PRODUCT));
+    }
+
+    private void validateName(String name) {
+        if (purgoMalumClient.containsProfanity(name)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_PRODUCT_NAME);
+        }
     }
 }

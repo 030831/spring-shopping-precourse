@@ -31,5 +31,4 @@ public class MemberController {
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return memberService.login(request);
     }
-
 }
