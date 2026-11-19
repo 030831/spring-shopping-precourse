@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,6 +15,8 @@ import shopping.auth.LoginMemberId;
 import shopping.wish.dto.WishRequest;
 import shopping.wish.dto.WishResponse;
 import shopping.wish.service.WishService;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/wishes")
@@ -33,5 +36,10 @@ public class WishController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@LoginMemberId Long memberId, @PathVariable Long wishId) {
         wishService.delete(memberId, wishId);
+    }
+
+    @GetMapping
+    public List<WishResponse> findAll(@LoginMemberId Long memberId) {
+        return wishService.findAll(memberId);
     }
 }

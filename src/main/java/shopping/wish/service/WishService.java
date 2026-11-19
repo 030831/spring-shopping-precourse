@@ -14,6 +14,8 @@ import shopping.wish.dto.WishResponse;
 import shopping.wish.entity.Wish;
 import shopping.wish.repository.WishRepository;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class WishService {
@@ -48,5 +50,15 @@ public class WishService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_EXIST_WISH));
 
         wishRepository.delete(wish);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WishResponse> findAll(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+
+        return wishRepository.findAllByMember(member).stream()
+                .map(WishResponse::from)
+                .toList();
     }
 }

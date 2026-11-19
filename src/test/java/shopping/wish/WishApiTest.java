@@ -26,6 +26,7 @@ import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
+import static org.springframework.http.HttpStatus.OK;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @SpringBootTest
@@ -197,6 +198,63 @@ class WishApiTest {
         assertError(result, UNAUTHORIZED, "INVALID_TOKEN");
     }
 
+    @Test
+    void 위시_목록을_조회하면_200과_내_위시를_준다() {
+        // given
+        Product latte = productRepository.save(new Product("라떼", 4500, OK_URL));
+        wishRepository.save(new Wish(member, product));
+        wishRepository.save(new Wish(member, latte));
+
+        // when
+        MvcTestResult result = getWishes(token);
+
+        // then
+        assertThat(result).hasStatus(OK);
+        assertThat(result).bodyJson().extractingPath("$[*].product.name").asArray()
+                .containsExactlyInAnyOrder("아메리카노", "라떼");
+    }
+
+    @Test
+    void 다른_회원의_위시는_목록에_나오지_않는다() {
+        // given
+        Member otherMember = memberRepository.save(new Member("other@example.com", "hash",
+                "남"));
+        Product latte = productRepository.save(new Product("라떼", 4500, OK_URL));
+        wishRepository.save(new Wish(member, product));
+        wishRepository.save(new Wish(otherMember, latte));
+
+        // when
+        MvcTestResult result = getWishes(token);
+
+        // then
+        assertThat(result).hasStatus(OK);
+        assertThat(result).bodyJson().extractingPath("$[*].product.name").asArray()
+                .containsExactly("아메리카노");
+    }
+
+    @Test
+    void 위시가_없으면_빈_목록을_준다() {
+        // when
+        MvcTestResult result = getWishes(token);
+
+        // then
+        assertThat(result).hasStatus(OK);
+        assertThat(result).bodyJson().extractingPath("$").asArray()
+                .isEmpty();
+    }
+
+    @Test
+    void 없는_회원의_토큰으로_위시를_조회하면_INVALID_TOKEN이다() {
+        // given
+        String unknownMemberToken = jwtProvider.createToken(999_999L);
+
+        // when
+        MvcTestResult result = getWishes(unknownMemberToken);
+
+        // then
+        assertError(result, UNAUTHORIZED, "INVALID_TOKEN");
+    }
+
     void assertError(MvcTestResult result, HttpStatus status, String code) {
         assertThat(result).hasStatus(status);
         assertThat(result).bodyJson().extractingPath("$.code").isEqualTo(code);
@@ -218,6 +276,12 @@ class WishApiTest {
 
     MvcTestResult deleteWish(String token, Long wishId) {
         return mvc.delete().uri(WISHES_URL + "/{wishId}", wishId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange();
+    }
+
+    MvcTestResult getWishes(String token) {
+        return mvc.get().uri(WISHES_URL)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchange();
     }
