@@ -1,6 +1,7 @@
 package shopping.wish.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import shopping.common.exception.BusinessException;
@@ -35,7 +36,7 @@ public class WishService {
             throw new BusinessException(ErrorCode.DUPLICATE_WISH_APPLY);
         }
 
-        Wish wish = wishRepository.save(new Wish(member, product));
+        Wish wish = saveWish(member, product);
 
         return WishResponse.from(wish);
     }
@@ -62,5 +63,13 @@ public class WishService {
     private Member findMember(Long memberId) {
         return memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+    }
+
+    private Wish saveWish(Member member, Product product) {
+        try {
+            return wishRepository.save(new Wish(member, product));
+        } catch (DataIntegrityViolationException exception) {
+            throw new BusinessException(ErrorCode.DUPLICATE_WISH_APPLY);
+        }
     }
 }
